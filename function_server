@@ -1,0 +1,45 @@
+
+const functions = require('firebase-functions');
+const admin = require('firebase-admin');
+const cors = require('cors')({ origin: true });
+admin.initializeApp();
+
+exports.handlePost = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== 'POST') {
+      return res.status(403).send('Forbidden!');
+    }
+
+    // Validasi data termasuk country
+    const { nama, email, country } = req.body;
+    
+    if (!nama || !email || !country) {
+      return res.status(400).send('Data tidak lengkap!');
+    }
+
+    // Validasi khusus country
+    if (country.toUpperCase() !== 'INDONESIA') { // case insensitive
+      return res.status(400).json({ 
+        error: 'Hanya tersedia untuk Indonesia',
+        countryReceived: country
+      });
+    }
+
+    try {
+      // Simpan data jika country valid
+      const docRef = await admin.firestore().collection('posts').add({
+        nama: nama,
+        email: email,
+        country: country.toUpperCase(),
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      // Redirect ke domain tujuan khusus untuk Indonesia
+      return res.redirect(302, 'https://rebrand.ly/2de3i7h');
+
+    } catch (error) {
+      console.error('Error:', error);
+      return res.status(500).send('Terjadi kesalahan server!');
+    }
+  });
+});
